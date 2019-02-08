@@ -50,16 +50,12 @@ if [ ! -d $HOME/mailinabox ]; then
 	if [ ! -f /usr/bin/git ]; then
 		echo Installing git . . .
 		apt-get -q -q update
-		DEBIAN_FRONTEND=noninteractive apt-get -q -q install -y git < /dev/null
+		DEBIAN_FRONTEND=noninteractive apt-get -q -q install -y git locales < /dev/null
 		echo
 	fi
 
 	echo Downloading Mail-in-a-Box $TAG. . .
-	git clone \
-		-b $TAG --depth 1 \
-		https://github.com/carlstrand/mailinabox \
-		$HOME/mailinabox \
-		< /dev/null 2> /dev/null
+	git clone --depth 1 https://github.com/carlstrand/mailinabox $HOME/mailinabox < /dev/null 2> /dev/null
 
 	echo
 fi
@@ -70,7 +66,7 @@ cd $HOME/mailinabox
 # Update it.
 if [ "$TAG" != `git describe` ]; then
 	echo Updating Mail-in-a-Box to $TAG . . .
-	git fetch --depth 1 --force --prune origin tag $TAG
+	git fetch --depth 1 --force --prune
 	if ! git checkout -q $TAG; then
 		echo "Update failed. Did you modify something in `pwd`?"
 		exit
