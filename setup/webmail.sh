@@ -45,19 +45,17 @@ RCM_PLUGIN_DIR=${RCM_DIR}/plugins
 RCM_CONFIG=${RCM_DIR}/config/config.inc.php
 
 needs_update=0 #NODOC
+
 if [ ! -f /usr/local/lib/roundcubemail/version ]; then
-	# not installed yet #NODOC
 	needs_update=1 #NODOC
 elif [[ "$UPDATE_KEY" != `cat /usr/local/lib/roundcubemail/version` ]]; then
-	# checks if the version is what we want
 	needs_update=1 #NODOC
 fi
 if [ $needs_update == 1 ]; then
 	# install roundcube
     
-    git clone git://github.com/roundcube/roundcubemail.git roundcubemail-master-git
-    
-    cd roundcubemail-master-git
+    git clone git://github.com/roundcube/roundcubemail.git rcube-custom-build-src
+    cd rcube-custom-build-src
     bin/install-jsdeps.sh --force
     bin/jsshrink.sh
     bin/updatecss.sh
@@ -65,23 +63,30 @@ if [ $needs_update == 1 ]; then
     
     rm transifexpull.sh package2composer.sh importgettext.sh exportgettext.sh README.md INSTALL UPGRADING, LICENSE, CHANGELOG
     rm -rf tests/ public_html/ installer/ .git* .tx*
-    
+
+    cd ..
+
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/tmp/
     cp composer.json-dist composer.json
+
     php /tmp/composer.phar require pear-pear.php.net/net_ldap2:~2.1.0 kolab/net_ldap3:dev-master --no-update
     php /tmp/composer.phar install --prefer-dist --no-dev
-	tar czf roundcubemail-master.tar.gz roundcubemail-master-git
-	rm -rf roundcubemail-master-git
-    
-    #hide_output wget -O /tmp/roundcube.tgz https://github.com/roundcube/roundcubemail/releases/download/$VERSION/roundcubemail-$VERSION-complete.tar.gz
-	tar -C /usr/local/lib --no-same-owner -zxf roundcubemail-master.tar.gz
-	rm -rf /usr/local/lib/roundcubemail
-	mv /usr/local/lib/roundcubemail-$VERSION/ $RCM_DIR
+
+	tar czf /tmp/roundcube.tgz rcube-custom-build-src
+	rm -rf rcube-custom-build-src
+
+	tar -C /usr/local/lib --no-same-owner -zxf roundcube.tgz
+	mv /usr/local/lib/roundcube/ $RCM_DIR
+
+    rm -rf /usr/local/lib/roundcube
 	rm -f /tmp/roundcube.tgz
 
-	# install roundcube persistent_login plugin
-	git_clone https://github.com/mfreiholz/Roundcube-Persistent-Login-Plugin.git $PERSISTENT_LOGIN_VERSION '' ${RCM_PLUGIN_DIR}/persistent_login
-	git_clone https://github.com/kitist/html5_notifier.git $HTML5_NOTIFIER_VERSION '' ${RCM_PLUGIN_DIR}/html5_notifier
+
+	#git clone https://github.com/mfreiholz/Roundcube-Persistent-Login-Plugin.git $PERSISTENT_LOGIN_VERSION '' ${RCM_PLUGIN_DIR}/persistent_login
+	#git clone https://github.com/kitist/html5_notifier.git $HTML5_NOTIFIER_VERSION '' ${RCM_PLUGIN_DIR}/html5_notifier
+
+
+
     wget_verify https://github.com/blind-coder/rcmcarddav/releases/download/v${CARDDAV_VERSION}/carddav-${CARDDAV_VERSION}.zip $CARDDAV_HASH /tmp/carddav.zip
 	unzip -q /tmp/carddav.zip -d ${RCM_PLUGIN_DIR}
 	rm -f /tmp/carddav.zip
