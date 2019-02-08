@@ -23,12 +23,15 @@ echo "Installing Roundcube (webmail)..."
 apt_install \
 	dbconfig-common \
 	php-cli php-sqlite3 php-intl php-json php-common php-curl \
-	php-gd php-pspell tinymce libjs-jquery libjs-jquery-mousewheel libmagic1 php-mbstring
+	php-gd php-pspell tinymce libjs-jquery libjs-jquery-mousewheel \
+    libmagic1 php-mbstring php-pear php-zip
+
+apt upgrade | apt autoremove
 
 # Install Roundcube from source if it is not already present or if it is out of date.
 # Combine the Roundcube version number with the commit hash of plugins to track
 # whether we have the latest version of everything.
-VERSION=1.4-beta
+VERSION=master #1.4-beta
 HASH=90c7900ccf7b2f46fe49c650d5adb9b85ee9cc22
 PERSISTENT_LOGIN_VERSION=dc5ca3d3f4415cc41edb2fde533c8a8628a94c76
 HTML5_NOTIFIER_VERSION=4b370e3cd60dabd2f428a26f45b677ad1b7118d5
@@ -53,29 +56,36 @@ fi
 if [ $needs_update == 1 ]; then
 	# install roundcube
     
-    hide_output wget -O /tmp/roundcube.tgz https://github.com/roundcube/roundcubemail/releases/download/$VERSION/roundcubemail-$VERSION-complete.tar.gz
-	tar -C /usr/local/lib --no-same-owner -zxf /tmp/roundcube.tgz
+    git clone git://github.com/roundcube/roundcubemail.git roundcubemail-master-git
+    
+    cd roundcubemail-git
+    bin/install-jsdeps.sh
+    bin/jsshrink.sh
+    bin/updatecss.sh
+    bin/cssshrink.sh
+    
+    rm transifexpull.sh package2composer.sh importgettext.sh exportgettext.sh README.md INSTALL UPGRADING, LICENSE, CHANGELOG
+    rm -rf tests/ public_html/ installer/ .git* .tx*
+    
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/tmp/
+    cp composer.json-dist composer.json
+    php /tmp/composer.phar require pear-pear.php.net/net_ldap2:~2.1.0 kolab/net_ldap3:dev-master --no-update
+    php /tmp/composer.phar install --prefer-dist --no-dev
+	tar czf roundcubemail-master.tar.gz roundcubemail-master-git
+	rm -rf roundcubemail-master-git
+    
+    #hide_output wget -O /tmp/roundcube.tgz https://github.com/roundcube/roundcubemail/releases/download/$VERSION/roundcubemail-$VERSION-complete.tar.gz
+	tar -C /usr/local/lib --no-same-owner -zxf roundcubemail-master.tar.gz
 	rm -rf /usr/local/lib/roundcubemail
 	mv /usr/local/lib/roundcubemail-$VERSION/ $RCM_DIR
 	rm -f /tmp/roundcube.tgz
 
 	# install roundcube persistent_login plugin
 	git_clone https://github.com/mfreiholz/Roundcube-Persistent-Login-Plugin.git $PERSISTENT_LOGIN_VERSION '' ${RCM_PLUGIN_DIR}/persistent_login
-
-	# install roundcube html5_notifier plugin
 	git_clone https://github.com/kitist/html5_notifier.git $HTML5_NOTIFIER_VERSION '' ${RCM_PLUGIN_DIR}/html5_notifier
-
-	# download and verify the full release of the carddav plugin
-	wget_verify \
-		https://github.com/blind-coder/rcmcarddav/releases/download/v${CARDDAV_VERSION}/carddav-${CARDDAV_VERSION}.zip \
-		$CARDDAV_HASH \
-		/tmp/carddav.zip
-
-	# unzip and cleanup
+    wget_verify https://github.com/blind-coder/rcmcarddav/releases/download/v${CARDDAV_VERSION}/carddav-${CARDDAV_VERSION}.zip $CARDDAV_HASH /tmp/carddav.zip
 	unzip -q /tmp/carddav.zip -d ${RCM_PLUGIN_DIR}
 	rm -f /tmp/carddav.zip
-
-	# record the version we've installed
 	echo $UPDATE_KEY > ${RCM_DIR}/version
 fi
 
@@ -120,13 +130,37 @@ cat > $RCM_CONFIG <<EOF;
 \$config['support_url'] = 'https://mailinabox.email/';
 \$config['product_name'] = '$PRIMARY_HOSTNAME Webmail';
 \$config['des_key'] = '$SECRET_KEY';
-\$config['plugins'] = array('html5_notifier', 'archive', 'zipdownload', 'password', 'managesieve', 'jqueryui', 'persistent_login', 'carddav', 'elastic4mobile');
+\$config['plugins'] = array('html5_notifier', 'archive', 'zipdownload', 'password', 'managesieve', 'jqueryui', 'persistent_login', 'carddav', 'autologon', 'filesystem_attachments', 'identity_select', 'identicon', 'redundant_attachments', 'show_additional_headers', 'virtuser_file', 'userinfo');
 \$config['skin'] = 'elastic';
 \$config['login_autocomplete'] = 2;
 \$config['password_charset'] = 'UTF-8';
 \$config['junk_mbox'] = 'Spam';
+\$config['identity_select_headers'] = array('Delivered-To');
+\$config['redundant_attachments_fallback'] = false;
+\$config['redundant_attachments_cache_ttl'] = 12 * 60 * 60;
+\$config['zipdownload_attachments'] = 1;
+\$config['zipdownload_selection'] = '3GB';
+\$config['zipdownload_charset'] = 'ISO-8859-1';
 ?>
 EOF
+
+
+
+
+#composer require boressoft/ident_switch
+#composer require cor/message_highlight
+#composer require alexandregz/twofactor_gauthenticator
+#composer require dsoares/rcguard
+#composer require roundcube/elastic4mobile
+#composer require pf4public/fetchmail
+#composer require dsoares/lastlogin
+#composer require san4op/folder_info
+#composer require roundcube/chbox
+#composer require sbehuret/user_config
+#composer require ss88/gravatar_imgs
+#composer require random-cuber/font_awesome
+#composer require roundcube/virtual_user_mapping
+
 
 # Configure CardDav
 cat > ${RCM_PLUGIN_DIR}/carddav/config.inc.php <<EOF;
@@ -191,5 +225,5 @@ chown www-data:www-data $STORAGE_ROOT/mail/roundcube/roundcube.sqlite
 chmod 664 $STORAGE_ROOT/mail/roundcube/roundcube.sqlite
 
 # Enable PHP modules.
-phpenmod -v php mcrypt imap
+phpenmod -v php mcrypt imap mbstring zlib
 restart_service php7.2-fpm
