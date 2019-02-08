@@ -57,7 +57,7 @@ if [ $needs_update == 1 ]; then
     
     git clone git://github.com/roundcube/roundcubemail.git roundcubemail-master-git
     
-    cd roundcubemail-git
+    cd roundcubemail-master-git
     bin/install-jsdeps.sh --force
     bin/jsshrink.sh
     bin/updatecss.sh
