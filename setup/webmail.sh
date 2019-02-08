@@ -26,7 +26,6 @@ apt_install \
 	php-gd php-pspell tinymce libjs-jquery libjs-jquery-mousewheel \
     libmagic1 php-mbstring php-pear php-zip
 
-apt upgrade | apt autoremove
 
 # Install Roundcube from source if it is not already present or if it is out of date.
 # Combine the Roundcube version number with the commit hash of plugins to track
@@ -59,7 +58,7 @@ if [ $needs_update == 1 ]; then
     git clone git://github.com/roundcube/roundcubemail.git roundcubemail-master-git
     
     cd roundcubemail-git
-    bin/install-jsdeps.sh
+    bin/install-jsdeps.sh --force
     bin/jsshrink.sh
     bin/updatecss.sh
     bin/cssshrink.sh
