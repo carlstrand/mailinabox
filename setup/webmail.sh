@@ -2,7 +2,7 @@
 # Webmail with Roundcube
 # ----------------------
 
-source setup/functions.sh # load our functions
+source $HOME/mailinabox/setup/functions.sh # load our functions
 source /etc/mailinabox.conf # load global vars
 
 # ### Installing Roundcube
