@@ -50,7 +50,7 @@ if [ ! -d $HOME/mailinabox ]; then
 	if [ ! -f /usr/bin/git ]; then
 		echo Installing git . . .
 		apt-get -q -q update
-		DEBIAN_FRONTEND=noninteractive apt-get -q -q install -y git locales < /dev/null
+		DEBIAN_FRONTEND=noninteractive apt-get -q -q install -y git locales default-jre < /dev/null
 		echo
 	fi
 
