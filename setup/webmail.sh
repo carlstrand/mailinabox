@@ -2,41 +2,18 @@
 # Webmail with Roundcube
 # ----------------------
 
-source ~/mailinabox/setup/functions.sh # load our functions
+source setup/functions.sh # load our functions
 source /etc/mailinabox.conf # load global vars
 
-# ### Installing Roundcube
-
-# We install Roundcube from sources, rather than from Ubuntu, because:
-#
-# 1. Ubuntu's `roundcube-core` package has dependencies on Apache & MySQL, which we don't want.
-#
-# 2. The Roundcube shipped with Ubuntu is consistently out of date.
-#
-# 3. It's packaged incorrectly --- it seems to be missing a directory of files.
-#
-# So we'll use apt-get to manually install the dependencies of roundcube that we know we need,
-# and then we'll manually install roundcube from source.
-
-# These dependencies are from `apt-cache showpkg roundcube-core`.
 echo "Installing Roundcube (webmail)..."
-#apt install	dbconfig-common \
-#	php-cli php-sqlite3 php-intl php-json php-common php-curl php-gd php-pspell tinymce libjs-jquery libjs-jquery-mousewheel libmagic1 php-mbstring
-    
-    
-# Install Roundcube from source if it is not already present or if it is out of date.
-# Combine the Roundcube version number with the commit hash of plugins to track
-# whether we have the latest version of everything.
-VERSION=master #1.4-beta
+
+VERSION=custom1
 HASH=90c7900ccf7b2f46fe49c650d5adb9b85ee9cc22
 PERSISTENT_LOGIN_VERSION=dc5ca3d3f4415cc41edb2fde533c8a8628a94c76
 HTML5_NOTIFIER_VERSION=4b370e3cd60dabd2f428a26f45b677ad1b7118d5
 CARDDAV_VERSION=3.0.3
 CARDDAV_HASH=d1e3b0d851ffa2c6bd42bf0c04f70d0e1d0d78f8
-
 UPDATE_KEY=$VERSION:$PERSISTENT_LOGIN_VERSION:$HTML5_NOTIFIER_VERSION:$CARDDAV_VERSION
-
-# paths that are often reused.
 RCM_DIR=/usr/local/lib/roundcubemail
 RCM_PLUGIN_DIR=${RCM_DIR}/plugins
 RCM_CONFIG=${RCM_DIR}/config/config.inc.php
@@ -44,50 +21,28 @@ RCM_CONFIG=${RCM_DIR}/config/config.inc.php
 needs_update=0 #NODOC
 
 if [ ! -f /usr/local/lib/roundcubemail/version ]; then
-	needs_update=1 #NODOC
-elif [[ "$UPDATE_KEY" != `cat /usr/local/lib/roundcubemail/version` ]]; then
-	needs_update=1 #NODOC
+    needs_update=1 #NODOC
+    
+    elif [[ "$UPDATE_KEY" != $(cat /usr/local/lib/roundcubemail/version) ]]; then
+    needs_update=1 #NODOC
 fi
+
+
 if [ $needs_update == 1 ]; then
-	# install roundcube
+    source setup/build-webmail.sh
     
-    git clone git://github.com/roundcube/roundcubemail.git rcube-custom-build-src
-    cd rcube-custom-build-src
-    bin/install-jsdeps.sh --force
-    bin/jsshrink.sh
-    bin/updatecss.sh
-    bin/cssshrink.sh
+    tar -C /usr/local/lib --no-same-owner -zxf /tmp/roundcubemail-release-complete.tar.gz
+    rm -rf /usr/local/lib/roundcubemail
+    mv /usr/local/lib/roundcubemail-$VERSION/ $RCM_DIR
+    rm -f /tmp/roundcubemail-release-complete.tar.gz
     
-    rm transifexpull.sh package2composer.sh importgettext.sh exportgettext.sh README.md INSTALL UPGRADING, LICENSE, CHANGELOG
-    rm -rf tests/ public_html/ installer/ .git* .tx*
-
-    cd ..
-
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/tmp/
-    cp composer.json-dist composer.json
-
-    php /tmp/composer.phar require pear-pear.php.net/net_ldap2:~2.1.0 kolab/net_ldap3:dev-master --no-update
-    php /tmp/composer.phar install --prefer-dist --no-dev
-
-	tar czf /tmp/roundcube.tgz rcube-custom-build-src
-	rm -rf rcube-custom-build-src
-
-	tar -C /usr/local/lib --no-same-owner -zxf roundcube.tgz
-	mv /usr/local/lib/roundcube/ $RCM_DIR
-
-    rm -rf /usr/local/lib/roundcube
-	rm -f /tmp/roundcube.tgz
-
-
-	#git clone https://github.com/mfreiholz/Roundcube-Persistent-Login-Plugin.git $PERSISTENT_LOGIN_VERSION '' ${RCM_PLUGIN_DIR}/persistent_login
-	#git clone https://github.com/kitist/html5_notifier.git $HTML5_NOTIFIER_VERSION '' ${RCM_PLUGIN_DIR}/html5_notifier
-
-
-
+    git_clone https://github.com/mfreiholz/Roundcube-Persistent-Login-Plugin.git $PERSISTENT_LOGIN_VERSION '' ${RCM_PLUGIN_DIR}/persistent_login
+    git_clone https://github.com/kitist/html5_notifier.git $HTML5_NOTIFIER_VERSION '' ${RCM_PLUGIN_DIR}/html5_notifier
     wget_verify https://github.com/blind-coder/rcmcarddav/releases/download/v${CARDDAV_VERSION}/carddav-${CARDDAV_VERSION}.zip $CARDDAV_HASH /tmp/carddav.zip
-	unzip -q /tmp/carddav.zip -d ${RCM_PLUGIN_DIR}
-	rm -f /tmp/carddav.zip
-	echo $UPDATE_KEY > ${RCM_DIR}/version
+    
+    unzip -q /tmp/carddav.zip -d ${RCM_PLUGIN_DIR}
+    rm -f /tmp/carddav.zip
+    echo $UPDATE_KEY > ${RCM_DIR}/version
 fi
 
 # ### Configuring Roundcube
@@ -145,9 +100,6 @@ cat > $RCM_CONFIG <<EOF;
 ?>
 EOF
 
-
-
-
 #composer require boressoft/ident_switch
 #composer require cor/message_highlight
 #composer require alexandregz/twofactor_gauthenticator
@@ -195,15 +147,15 @@ sudo -u www-data touch /var/log/roundcubemail/errors
 # The config comes empty by default, so we need the settings
 # we're not planning to change in config.inc.dist...
 cp ${RCM_PLUGIN_DIR}/password/config.inc.php.dist \
-	${RCM_PLUGIN_DIR}/password/config.inc.php
+${RCM_PLUGIN_DIR}/password/config.inc.php
 
 tools/editconf.py ${RCM_PLUGIN_DIR}/password/config.inc.php \
-	"\$config['password_minimum_length']=8;" \
-	"\$config['password_db_dsn']='sqlite:///$STORAGE_ROOT/mail/users.sqlite';" \
-	"\$config['password_query']='UPDATE users SET password=%D WHERE email=%u';" \
-	"\$config['password_dovecotpw']='/usr/bin/doveadm pw';" \
-	"\$config['password_dovecotpw_method']='SHA512-CRYPT';" \
-	"\$config['password_dovecotpw_with_method']=true;"
+"\$config['password_minimum_length']=8;" \
+"\$config['password_db_dsn']='sqlite:///$STORAGE_ROOT/mail/users.sqlite';" \
+"\$config['password_query']='UPDATE users SET password=%D WHERE email=%u';" \
+"\$config['password_dovecotpw']='/usr/bin/doveadm pw';" \
+"\$config['password_dovecotpw_method']='SHA512-CRYPT';" \
+"\$config['password_dovecotpw_with_method']=true;"
 
 # so PHP can use doveadm, for the password changing plugin
 usermod -a -G dovecot www-data
