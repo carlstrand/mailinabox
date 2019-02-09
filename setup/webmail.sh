@@ -88,7 +88,7 @@ cat > $RCM_CONFIG <<EOF;
 \$config['support_url'] = 'https://mailinabox.email/';
 \$config['product_name'] = '$PRIMARY_HOSTNAME Webmail';
 \$config['des_key'] = '$SECRET_KEY';
-\$config['plugins'] = array('html5_notifier', 'archive', 'zipdownload', 'password', 'managesieve', 'jqueryui', 'persistent_login', 'carddav', 'autologon', 'filesystem_attachments', 'identity_select', 'identicon', 'redundant_attachments', 'show_additional_headers', 'virtuser_file', 'userinfo');
+\$config['plugins'] = array('html5_notifier', 'archive', 'zipdownload', 'password', 'managesieve', 'jqueryui', 'persistent_login', 'carddav', 'autologon', 'identity_select', 'identicon', 'redundant_attachments', 'show_additional_headers', 'virtuser_file', 'userinfo');
 \$config['skin'] = 'elastic';
 \$config['login_autocomplete'] = 2;
 \$config['password_charset'] = 'UTF-8';
