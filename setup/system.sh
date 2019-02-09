@@ -49,30 +49,30 @@ ROOT_IS_BTRFS=$(grep "\/ .*btrfs" /proc/mounts || /bin/true)
 TOTAL_PHYSICAL_MEM=$(head -n 1 /proc/meminfo | awk '{print $2}' || /bin/true)
 AVAILABLE_DISK_SPACE=$(df / --output=avail | tail -n 1)
 if
-	[ -z "$SWAP_MOUNTED" ] &&
-	[ -z "$SWAP_IN_FSTAB" ] &&
-	[ ! -e /swapfile ] &&
-	[ -z "$ROOT_IS_BTRFS" ] &&
-	[ $TOTAL_PHYSICAL_MEM -lt 1900000 ] &&
-	[ $AVAILABLE_DISK_SPACE -gt 5242880 ]
+[ -z "$SWAP_MOUNTED" ] &&
+[ -z "$SWAP_IN_FSTAB" ] &&
+[ ! -e /swapfile ] &&
+[ -z "$ROOT_IS_BTRFS" ] &&
+[ $TOTAL_PHYSICAL_MEM -lt 1900000 ] &&
+[ $AVAILABLE_DISK_SPACE -gt 5242880 ]
 then
-	echo "Adding a swap file to the system..."
-
-	# Allocate and activate the swap file. Allocate in 1KB chuncks
-	# doing it in one go, could fail on low memory systems
-	dd if=/dev/zero of=/swapfile bs=1024 count=$[1024*1024] status=none
-	if [ -e /swapfile ]; then
-		chmod 600 /swapfile
-		hide_output mkswap /swapfile
-		swapon /swapfile
-	fi
-
-	# Check if swap is mounted then activate on boot
-	if swapon -s | grep -q "\/swapfile"; then
-		echo "/swapfile   none    swap    sw    0   0" >> /etc/fstab
-	else
-		echo "ERROR: Swap allocation failed"
-	fi
+    echo "Adding a swap file to the system..."
+    
+    # Allocate and activate the swap file. Allocate in 1KB chuncks
+    # doing it in one go, could fail on low memory systems
+    dd if=/dev/zero of=/swapfile bs=1024 count=$[1024*1024] status=none
+    if [ -e /swapfile ]; then
+        chmod 600 /swapfile
+        hide_output mkswap /swapfile
+        swapon /swapfile
+    fi
+    
+    # Check if swap is mounted then activate on boot
+    if swapon -s | grep -q "\/swapfile"; then
+        echo "/swapfile   none    swap    sw    0   0" >> /etc/fstab
+    else
+        echo "ERROR: Swap allocation failed"
+    fi
 fi
 
 # ### Add PPAs.
@@ -80,14 +80,14 @@ fi
 # We install some non-standard Ubuntu packages maintained by other
 # third-party providers. First ensure add-apt-repository is installed.
 
-if [ ! -f /usr/bin/add-apt-repository ]; then
-	echo "Installing add-apt-repository..."
-	hide_output apt-get update
-	apt_install software-properties-common
-fi
+# if [ ! -f /usr/bin/add-apt-repository ]; then
+#     echo "Installing add-apt-repository..."
+#     hide_output apt-get update
+#     apt_install software-properties-common
+# fi
 
 # Install the certbot PPA.
-hide_output add-apt-repository -y ppa:certbot/certbot
+# hide_output add-apt-repository -y ppa:certbot/certbot
 
 # ### Update Packages
 
@@ -95,15 +95,15 @@ hide_output add-apt-repository -y ppa:certbot/certbot
 # of things from Ubuntu, as well as the directory of packages provide by the
 # PPAs so we can install those packages later.
 
-echo Updating system packages...
-hide_output apt-get update
-apt_get_quiet upgrade
+#echo Updating system packages...
+#hide_output apt-get update
+#apt_get_quiet upgrade
 
 # Old kernels pile up over time and take up a lot of disk space, and because of Mail-in-a-Box
 # changes there may be other packages that are no longer needed. Clear out anything apt knows
 # is safe to delete.
 
-apt_get_quiet autoremove
+#apt_get_quiet autoremove
 
 # ### Install System Packages
 
@@ -123,20 +123,20 @@ apt_get_quiet autoremove
 # * bc: allows us to do math to compute sane defaults
 
 echo Installing system packages...
-apt_install python3 python3-dev python3-pip \
-	netcat-openbsd wget curl git sudo coreutils bc \
-	haveged pollinate unzip \
-	unattended-upgrades cron ntp fail2ban rsyslog \
-    build-essential zlib1g-dev libpcre3 libpcre3-dev unzip uuid-dev \
-    openssl libssl-dev zlibc zlib1g libxml2-dev libxslt-dev libgd-dev gcc \
-    google-perftools libgoogle-perftools-dev libperl-dev libgeoip1 libgeoip-dev default-jre
+# apt_install python3 python3-dev python3-pip \
+# netcat-openbsd wget curl git sudo coreutils bc \
+# haveged pollinate unzip \
+# unattended-upgrades cron ntp fail2ban rsyslog \
+# build-essential zlib1g-dev libpcre3 libpcre3-dev unzip uuid-dev \
+# openssl libssl-dev zlibc zlib1g libxml2-dev libxslt-dev libgd-dev gcc \
+# google-perftools libgoogle-perftools-dev libperl-dev libgeoip1 libgeoip-dev
 
 # ### Suppress Upgrade Prompts
 # When Ubuntu 20 comes out, we don't want users to be prompted to upgrade,
 # because we don't yet support it.
 if [ -f /etc/update-manager/release-upgrades ]; then
-	tools/editconf.py /etc/update-manager/release-upgrades Prompt=never
-	rm -f /var/lib/ubuntu-release-upgrader/release-upgrade-available
+    tools/editconf.py /etc/update-manager/release-upgrades Prompt=never
+    rm -f /var/lib/ubuntu-release-upgrader/release-upgrade-available
 fi
 
 # ### Set the system timezone
@@ -154,21 +154,21 @@ fi
 # not likely the user will want to change this, so we only ask on first
 # setup.
 if [ -z "${NONINTERACTIVE:-}" ]; then
-	if [ ! -f /etc/timezone ] || [ ! -z ${FIRST_TIME_SETUP:-} ]; then
-		# If the file is missing or this is the user's first time running
-		# Mail-in-a-Box setup, run the interactive timezone configuration
-		# tool.
-		dpkg-reconfigure tzdata
-		restart_service rsyslog
-	fi
+    if [ ! -f /etc/timezone ] || [ ! -z ${FIRST_TIME_SETUP:-} ]; then
+        # If the file is missing or this is the user's first time running
+        # Mail-in-a-Box setup, run the interactive timezone configuration
+        # tool.
+        dpkg-reconfigure tzdata
+        restart_service rsyslog
+    fi
 else
-	# This is a non-interactive setup so we can't ask the user.
-	# If /etc/timezone is missing, set it to UTC.
-	if [ ! -f /etc/timezone ]; then
-		echo "Setting timezone to UTC."
-		echo "Etc/UTC" > /etc/timezone
-		restart_service rsyslog
-	fi
+    # This is a non-interactive setup so we can't ask the user.
+    # If /etc/timezone is missing, set it to UTC.
+    if [ ! -f /etc/timezone ]; then
+        echo "Setting timezone to UTC."
+        echo "Etc/UTC" > /etc/timezone
+        restart_service rsyslog
+    fi
 fi
 
 # ### Seed /dev/urandom
@@ -229,20 +229,20 @@ pollinate  -q -r
 
 # We need an ssh key to store backups via rsync, if it doesn't exist create one
 if [ ! -f /root/.ssh/id_rsa_miab ]; then
-	echo 'Creating SSH key for backup…'
-	ssh-keygen -t rsa -b 2048 -a 100 -f /root/.ssh/id_rsa_miab -N '' -q
+    echo 'Creating SSH key for backup…'
+    ssh-keygen -t rsa -b 2048 -a 100 -f /root/.ssh/id_rsa_miab -N '' -q
 fi
 
 # ### Package maintenance
 #
 # Allow apt to install system updates automatically every day.
 
-cat > /etc/apt/apt.conf.d/02periodic <<EOF;
-APT::Periodic::MaxAge "7";
-APT::Periodic::Update-Package-Lists "1";
-APT::Periodic::Unattended-Upgrade "1";
-APT::Periodic::Verbose "0";
-EOF
+#cat > /etc/apt/apt.conf.d/02periodic <<EOF;
+#APT::Periodic::MaxAge "7";
+#APT::Periodic::Update-Package-Lists "1";
+#APT::Periodic::Unattended-Upgrade "1";
+#APT::Periodic::Verbose "0";
+#EOF
 
 # ### Firewall
 
@@ -250,26 +250,26 @@ EOF
 # a kernel that supports iptables. To avoid error-like output in these cases, #NODOC
 # we skip this if the user sets DISABLE_FIREWALL=1. #NODOC
 if [ -z "${DISABLE_FIREWALL:-}" ]; then
-	# Install `ufw` which provides a simple firewall configuration.
-	apt_install ufw
-
-	# Allow incoming connections to SSH.
-	ufw_allow ssh;
-
-	# ssh might be running on an alternate port. Use sshd -T to dump sshd's #NODOC
-	# settings, find the port it is supposedly running on, and open that port #NODOC
-	# too. #NODOC
-	SSH_PORT=$(sshd -T 2>/dev/null | grep "^port " | sed "s/port //") #NODOC
-	if [ ! -z "$SSH_PORT" ]; then
-	if [ "$SSH_PORT" != "22" ]; then
-
-	echo Opening alternate SSH port $SSH_PORT. #NODOC
-	ufw_allow $SSH_PORT #NODOC
-
-	fi
-	fi
-
-	ufw --force enable;
+    # Install `ufw` which provides a simple firewall configuration.
+    #apt_install ufw
+    
+    # Allow incoming connections to SSH.
+    ufw_allow ssh;
+    
+    # ssh might be running on an alternate port. Use sshd -T to dump sshd's #NODOC
+    # settings, find the port it is supposedly running on, and open that port #NODOC
+    # too. #NODOC
+    SSH_PORT=$(sshd -T 2>/dev/null | grep "^port " | sed "s/port //") #NODOC
+    if [ ! -z "$SSH_PORT" ]; then
+        if [ "$SSH_PORT" != "22" ]; then
+            
+            echo Opening alternate SSH port $SSH_PORT. #NODOC
+            ufw_allow $SSH_PORT #NODOC
+            
+        fi
+    fi
+    
+    ufw --force enable;
 fi #NODOC
 
 # ### Local DNS Service
@@ -315,12 +315,13 @@ fi #NODOC
 #   name server, on IPV6.
 # * The listen-on directive in named.conf.options restricts `bind9` to
 #   binding to the loopback interface instead of all interfaces.
-apt_install bind9
+#apt_install bind9
+
 tools/editconf.py /etc/default/bind9 \
-	"OPTIONS=\"-u bind -4\""
+"OPTIONS=\"-u bind -4\""
 if ! grep -q "listen-on " /etc/bind/named.conf.options; then
-	# Add a listen-on directive if it doesn't exist inside the options block.
-	sed -i "s/^}/\n\tlisten-on { 127.0.0.1; };\n}/" /etc/bind/named.conf.options
+    # Add a listen-on directive if it doesn't exist inside the options block.
+    sed -i "s/^}/\n\tlisten-on { 127.0.0.1; };\n}/" /etc/bind/named.conf.options
 fi
 
 # First we'll disable systemd-resolved's management of resolv.conf and its stub server.
@@ -344,9 +345,9 @@ systemctl restart systemd-resolved
 rm -f /etc/fail2ban/jail.local # we used to use this file but don't anymore
 rm -f /etc/fail2ban/jail.d/defaults-debian.conf # removes default config so we can manage all of fail2ban rules in one config
 cat conf/fail2ban/jails.conf \
-	| sed "s/PUBLIC_IP/$PUBLIC_IP/g" \
-	| sed "s#STORAGE_ROOT#$STORAGE_ROOT#" \
-	> /etc/fail2ban/jail.d/mailinabox.conf
+| sed "s/PUBLIC_IP/$PUBLIC_IP/g" \
+| sed "s#STORAGE_ROOT#$STORAGE_ROOT#" \
+> /etc/fail2ban/jail.d/mailinabox.conf
 cp -f conf/fail2ban/filter.d/* /etc/fail2ban/filter.d/
 
 # On first installation, the log files that the jails look at don't all exist.
