@@ -14,4 +14,4 @@ ${workdir_src}/bin/cssshrink.sh
 (cd "${workdir_src}" && mv composer.json-dist composer.json && php /tmp/composer.phar install --prefer-dist --no-dev)
 rm -rf tests plugins/*/tests .git* .tx* index-test.php Dockerfile vendor/pear/*/tests vendor/*/*/.git* vendor/pear/crypt_gpg/tools vendor/pear/console_commandline/docs vendor/pear/mail_mime/scripts vendor/pear/net_ldap2/doc vendor/pear/net_sm$
 
-tar czf /tmp/roundcubemail-release-complete.tar.gz rcube-src-git
+tar -czvf /tmp/roundcubemail-release-complete.tar.gz /tmp/rcube-src-git
