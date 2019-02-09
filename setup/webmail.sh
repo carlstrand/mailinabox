@@ -32,8 +32,10 @@ if [ $needs_update == 1 ]; then
     source setup/build-webmail.sh
     
     tar -C /usr/local/lib --no-same-owner -zxf /tmp/roundcubemail-release-complete.tar.gz
+    
     rm -rf /usr/local/lib/roundcubemail
-    mv /usr/local/lib/roundcubemail-$VERSION/ $RCM_DIR
+    
+    mv /usr/local/lib/tmp/rcube-src-git $RCM_DIR
     rm -f /tmp/roundcubemail-release-complete.tar.gz
     
     git_clone https://github.com/mfreiholz/Roundcube-Persistent-Login-Plugin.git $PERSISTENT_LOGIN_VERSION '' ${RCM_PLUGIN_DIR}/persistent_login
